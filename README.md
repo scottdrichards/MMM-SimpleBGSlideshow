@@ -1,7 +1,9 @@
 # Simple Background Slideshow
-This module is a spiritual fork from [Darick Carpenter's BackgroundSlideshow](https://github.com/darickc/MMM-BackgroundSlideshow). I wrote a new module from scratch while using his for reference. There were two main problems that I wanted to fix:
+This module is a spiritual fork from [Darick Carpenter's BackgroundSlideshow](https://github.com/darickc/MMM-BackgroundSlideshow). I wrote a new module from scratch while using his for reference. There were a few issues I wanted to address:
 1. Because of synchronous file system calls, if there were a large number of images to search and a slow computer, the event loop would hang and the Node server would crash. This was fixed by utilizing the file system promise API for asynchronous calls.
-2. Some image data was transferred over the socket. This does not take advantage of browser image processing features and might congest the socket so I removed it to only rely on express for hosting images and the browser accessing images via link.
+2. Some image data was transferred over the socket. The author did this to overcome some bugs people were seeing and to make it so that problematic filenames were no longer an issue. However, this does not take advantage of browser image data management features and might congest the socket so I removed it to only rely on express for hosting images and the browser accessing images via link.
+3. The server and client were too intertwined for my liking. I made it so that most of the logic is now done at the client with minimal interaction with the server, just requesting new images.
+4. I wanted to make the CSS and JS more clean and readable.
 
 
 I also trimmed features that seemed to have limited use for most people. If there are missing features that people would like, I would be happy to add them in.
