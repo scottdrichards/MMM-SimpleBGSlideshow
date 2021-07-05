@@ -7,7 +7,7 @@
  * MIT Licensed.
  *
  * Module MMM-SimpleBGSlideshow by Scott Richards
- * Inspired MMM-BackgroundSlideshow By Darick Carpenter
+ * Heavily Inspired MMM-BackgroundSlideshow By Darick Carpenter
  * MIT Licensed.
  */
 
@@ -32,25 +32,12 @@ const MMM_SimpleBGSlideshow = {
     validImageFileExtensions: "bmp,jpg,jpeg,gif,png",
 
     // the gradient to make the text more visible
-    gradient: [
-      "rgba(0, 0, 0, 0.75) 0%",
-      "rgba(0, 0, 0, 0) 40%",
-      "rgba(0, 0, 0, 0) 80%",
-      "rgba(0, 0, 0, 0.75) 100%"
-    ],
-    horizontalGradient: [
-      "rgba(0, 0, 0, 0.75) 0%",
-      "rgba(0, 0, 0, 0) 40%",
-      "rgba(0, 0, 0, 0) 80%",
-      "rgba(0, 0, 0, 0.75) 100%"
-    ],
-    radialGradient: [
-      "rgba(0,0,0,0) 0%",
-      "rgba(0,0,0,0) 75%",
-      "rgba(0,0,0,0.25) 100%"
-    ],
-    // the direction the gradient goes, vertical, horizontal, both or radial
-    gradientDirection: "vertical"
+    gradient: {
+      direction: "vertical", //horizontal, radial
+      opacity: 0.75, // 1 is black
+      stop1: "40%", // linear first stop, radial start gradient
+      stop2: "80%" // linear second start, radial end gradient
+    }
   },
 
   // load function
@@ -95,17 +82,21 @@ const MMM_SimpleBGSlideshow = {
 
   // Override dom generator.
   getDom: function () {
-    // Set CSS parameters (variables)
-    const moduleElement = document.getElementById(this.identifier);
-    const gradDirection = {
-      vertical: "bottom",
-      horizontal: "right"
-    }[this.config.gradientDirection];
-    if (gradDirection)
-      moduleElement.style.setProperty("--grad-direction", gradDirection);
-
     const wrapper = document.createElement("div");
     wrapper.className = "wrapper";
+
+    // Add classes for gradients
+    const gradientClasses = {
+      vertical: ["linearGradient", "vertical"],
+      horizontal: ["linearGradient", "horizontal"],
+      radial: ["radialGradient"]
+    }[this.config.gradient.direction];
+    if (gradientClasses) wrapper.classList.add(...gradientClasses);
+    // CSS custom properties
+    Object.entries(this.config.gradient)
+      .filter(([k, v]) => v !== "direction")
+      .forEach(([k, v]) => wrapper.style.setProperty(`--${k}`, v));
+
     this.imagesDiv = document.createElement("div");
     this.imagesDiv.className = "images";
     wrapper.appendChild(this.imagesDiv);

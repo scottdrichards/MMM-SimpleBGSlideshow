@@ -1,5 +1,5 @@
 .MMM-SimpleBGSlideshow,
-.MMM-SimpleBGSlideshow::after,
+.MMM-SimpleBGSlideshow .wrapper::after,
 .MMM-SimpleBGSlideshow .module-content,
 .MMM-SimpleBGSlideshow .wrapper,
 .MMM-SimpleBGSlideshow .images,
@@ -9,17 +9,29 @@
     height:100%
 }
 
-.MMM-SimpleBGSlideshow::after {
+.MMM-SimpleBGSlideshow .wrapper::after {
     content: "";
+}
+.MMM-SimpleBGSlideshow .wrapper.linearGradient::after {
     background: linear-gradient(
-        to var(--grad-direction),
-        rgba(0, 0, 0, 0.75) 0%,
-        rgba(0,0,0,0) 40%,
-        rgba(0,0,0,0) 80%,
-        rgb(0, 0, .75)100%
+        var(--grad-linear-angle, 0deg),
+        rgba(0, 0,0, var(--grad-opacity, .75)) 0%,
+        rgba(0,0,0,0) var(--grad-stop1, 40%),
+        rgba(0,0,0,0) var(--grad-stop2, 80%),
+        rgba(0, 0,0, var(--grad-opacity, .75)) 100%
     );
 }
+.MMM-SimpleBGSlideshow .wrapper.linearGradient.horizontal{
+    --grad-linear-angle: 90deg
+}
 
+.MMM-SimpleBGSlideshow .wrapper.radialGradient::after {
+    background: radial-gradient(
+        closest-side,
+        rgba(0,0,0,0) var(--grad-stop1, 80%),
+        rgba(0,0,0,var(--grad-opacity, .75)) var(--grad-stop2, 110%)
+    );
+}
 
 .MMM-SimpleBGSlideshow img{
     object-fit: cover;
