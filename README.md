@@ -8,10 +8,14 @@ I also trimmed features that seemed to have limited use for most people. If ther
 Stylistically, I removed most chained if/else statements in favor of early return or key/value switch objects.
 
 ## Installation
-There are no dependencies or node-modules required for this module. To install, run the following commands:
-
     cd ~/MagicMirror/modules/
     git clone https://github.com/scottdrichards/MMM-SimpleBGSlideshow
+
+The only dependency for this module is express. This is already loaded with Magic Mirror but you can install it explicitly just to be sure:
+    
+    cd ./MMM-SimpleBGSlideshow
+    npm i
+
 ## Usage
 You can add the following to your main configuration file:
 
