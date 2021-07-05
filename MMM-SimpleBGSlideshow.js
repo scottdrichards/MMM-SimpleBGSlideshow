@@ -33,11 +33,12 @@ const MMM_SimpleBGSlideshow = {
 
     // the gradient to make the text more visible
     gradient: {
-      direction: "vertical", //horizontal, radial
+      direction: "radial", //vertical, horizontal, radial
       opacity: 0.75, // 1 is black
       stop1: "40%", // linear first stop, radial start gradient
       stop2: "80%" // linear second start, radial end gradient
-    }
+    },
+    brightenText: true // override global text colors to be brighter
   },
 
   // load function
@@ -92,10 +93,12 @@ const MMM_SimpleBGSlideshow = {
       radial: ["radialGradient"]
     }[this.config.gradient.direction];
     if (gradientClasses) wrapper.classList.add(...gradientClasses);
-    // CSS custom properties
+    // CSS custom properties for gradients
     Object.entries(this.config.gradient)
       .filter(([k, v]) => v !== "direction")
       .forEach(([k, v]) => wrapper.style.setProperty(`--${k}`, v));
+
+    if (this.config.brightenText) document.body.classList.add("brighterColors");
 
     this.imagesDiv = document.createElement("div");
     this.imagesDiv.className = "images";

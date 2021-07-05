@@ -36,4 +36,8 @@
 .MMM-SimpleBGSlideshow img{
     object-fit: cover;
 }
-    
+
+body.brighterColors{
+    --color-text: #e6e6e6;
+    --color-text-dimmed: #bfbcbc;
+}
