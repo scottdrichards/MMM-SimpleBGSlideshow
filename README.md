@@ -40,10 +40,10 @@ You can add the following to your main configuration file:
 Here is how to configure the gradient object
 
     {
-      direction: "radial", //vertical, horizontal, radial`
+      direction: "linear", //vertical, horizontal, radial`
       opacity: 0.75, // 1 is black
       stop1: "40%", // linear first stop, radial start gradient
-      stop2: "80%" // linear second start, radial end gradient
+      stop2: "80%" // linear second start, radial end gradient (i.e., 120%)
     }
 
 # Screenshots
