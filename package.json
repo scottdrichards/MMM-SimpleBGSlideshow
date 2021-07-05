@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/scottdrichards/MMM-SimpleBGSlideshow/issues"
   },
-  "homepage": "https://github.com/scottdrichards/MMM-SimpleBGSlideshow#readme"
+  "homepage": "https://github.com/scottdrichards/MMM-SimpleBGSlideshow#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
 }
