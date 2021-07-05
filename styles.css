@@ -1,0 +1,27 @@
+.MMM-SimpleBGSlideshow,
+.MMM-SimpleBGSlideshow::after,
+.MMM-SimpleBGSlideshow .module-content,
+.MMM-SimpleBGSlideshow .wrapper,
+.MMM-SimpleBGSlideshow .images,
+.MMM-SimpleBGSlideshow img {
+    position: absolute;
+    width:100%;
+    height:100%
+}
+
+.MMM-SimpleBGSlideshow::after {
+    content: "";
+    background: linear-gradient(
+        to var(--grad-direction),
+        rgba(0, 0, 0, 0.75) 0%,
+        rgba(0,0,0,0) 40%,
+        rgba(0,0,0,0) 80%,
+        rgb(0, 0, .75)100%
+    );
+}
+
+
+.MMM-SimpleBGSlideshow img{
+    object-fit: cover;
+}
+    

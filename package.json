@@ -1,0 +1,19 @@
+{
+  "name": "mmm-simplebgslideshow",
+  "version": "1.0.0",
+  "description": "",
+  "main": "MMM-SimpleBGSlideshow.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scottdrichards/MMM-SimpleBGSlideshow.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/scottdrichards/MMM-SimpleBGSlideshow/issues"
+  },
+  "homepage": "https://github.com/scottdrichards/MMM-SimpleBGSlideshow#readme"
+}
