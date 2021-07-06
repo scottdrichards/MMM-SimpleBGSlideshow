@@ -10,7 +10,7 @@
 const express = require("express");
 const Log = require("../../js/logger.js");
 const NodeHelper = require("node_helper");
-const FSPromises = require("fs/promises");
+const FSPromises = require("fs").promises;
 const pathModule = require("path");
 const moduleName = "MMM-SimpleBGSlideshow";
 
