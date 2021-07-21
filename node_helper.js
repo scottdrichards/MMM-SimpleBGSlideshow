@@ -12,137 +12,139 @@ const Log = require("../../js/logger.js");
 const NodeHelper = require("node_helper");
 const FSPromises = require("fs").promises;
 const pathModule = require("path");
-const moduleName = "MMM-SimpleBGSlideshow";
 
 module.exports = NodeHelper.create({
-  expressInstance: undefined,
-  // subclass start method, clears the initial config array
   start: function () {
-    this.validImageFileExtensions = new Set();
     this.expressInstance = this.expressApp;
-    this.imageList = [];
-    this.boundRoutes = new Set();
-    this.curIndex = 0;
+    this.watchedPaths = {}; // {path:{abortSignal, watcher, syncedEndpoints:state}}
   },
 
-  // subclass socketNotificationReceived, received notification from module
-  socketNotificationReceived: function (notification, payload) {
+  socketNotificationReceived: function (notification, config) {
     Log.info(notification);
 
-    const actions = {
-      [`${moduleName} image request`]: () => {
-        const config = payload;
-
-        // Create express routes for this moddule
-        const oneDay = 24 * 60 * 60 * 1_000;
-        config.imagePaths
-          .filter((path) => !this.boundRoutes.has(path))
-          .forEach((path) => {
-            this.expressInstance.use(
-              "/" + path,
-              express.static(path, {
-                maxAge: oneDay
-              })
-            );
-            this.boundRoutes.add(path);
-          });
-
-        const validExtensionsList = config.validImageFileExtensions
-          .toLowerCase()
-          .split(",");
-        const validExtensionsSet = new Set(validExtensionsList);
-
-        prepareImageList(config, validExtensionsSet).then((imagePaths) => {
-          this.sendSocketNotification(`${moduleName} image list`, {
-            identifier: config.identifier,
-            imageList: imagePaths
-          });
-        });
-      }
-    };
-    if (actions[notification]) {
-      // Run the action
-      actions[notification]();
+    if (notification === "unsubscribe") {
+      // TODO: unsubscribe from listeners
+      return;
     }
+
+    if (notification !== "subscribe")
+      throw `No handler for notification: '${notification}'`;
+
+    // Set up paths that are not currently monitored
+    config.imagePaths
+      .filter((path) => !(path in this.watchedPaths))
+      .forEach((path) => {
+        this.watchedPaths[path] = {
+          abortController: new AbortController(),
+          timer: undefined, // This is used to debounce file change messages
+          currentImages: new Set(),
+          syncedEndpoints: {}
+        };
+
+        // Bind in express
+        this.expressInstance.use(
+          "/" + path,
+          express.static(path, {
+            maxAge: 60 * 60 * 1000 // one hour
+          })
+        );
+        // Watch files and register them
+        this.watchPath(path);
+      });
+
+    // Register the module as an interested party
+    config.imagePaths
+      .filter((path) => {
+        // We only want paths that the module isn't already registered for
+        return !this.watchedPaths[path].syncedEndpoints[config.id];
+      })
+      .forEach((path) => {
+        // Add path to watch list
+        this.watchedPaths[path].syncedEndpoints[config.identifier] = new Set();
+        // Get the module up to speed
+        if (this.watchedPaths[path].currentImages.size)
+          this.sendUpdates(path, config.identifier);
+      });
+  },
+  watchPath: function (path) {
+    // Find current files
+    console.log(`Reading files in ${path}`);
+    FSPromises.readdir(path).then((diskItems) => {
+      diskItems.map((diskItem) => this.processFilePath(path, diskItem));
+    });
+
+    // Spin up a file watcher daemon
+    try {
+      const watcher = FSPromises.watch(
+        path,
+        this.watchedPaths[path].abortController.abortSignal
+      );
+      (async () => {
+        // Async portion that will keep running in background
+        console.log(`Watching ${path}`);
+        for await (const event of watcher) {
+          // New file change detected
+          if (event.eventType === "rename") {
+            // "rename" is used for add/delete/rename. A rename will actully
+            // cause two calls, one for the old file name and one for the new
+
+            // Now lets see if it is a file path we care about
+            this.processFilePath(path, event.filename);
+          }
+        }
+        console.log(`No longer watching ${path}`);
+      })(); // async IIFE
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      throw err;
+    }
+  },
+  processFilePath: function (path, filename) {
+    const filePath = pathModule.join(path, filename);
+    FSPromises.stat(filePath)
+      .then((stats) => {
+        this.watchedPaths[path].currentImages.add(filename);
+      })
+      .catch((error) => {
+        console.error(error);
+        this.watchedPaths[path]?.currentImages.delete(filename);
+      })
+      .finally(() => {
+        clearTimeout(this.watchedPaths[path]?.timer);
+        this.watchedPaths[path].timer = setTimeout(() => {
+          this.sendUpdates(path);
+        }, 500);
+      });
+  },
+  sendUpdates: function (path, id = undefined) {
+    // The watchedPaths[path] may have been removed since we set up this timer
+    if (!this.watchedPaths[path]) return;
+
+    (id ? [id] : Object.keys(this.watchedPaths[path].syncedEndpoints)).forEach(
+      (id) => {
+        const syncedImages = this.watchedPaths[path].syncedEndpoints[id];
+        const imagesToAdd = [
+          ...setSubtraction(this.watchedPaths[path].currentImages, syncedImages)
+        ];
+        const imagesToRemove = [
+          ...setSubtraction(syncedImages, this.watchedPaths[path].currentImages)
+        ];
+
+        this.sendSocketNotification(`IMAGE_PATH_UPDATE`, {
+          identifier: id,
+          path,
+          imagesToAdd,
+          imagesToRemove
+        });
+
+        this.watchedPaths[path].syncedEndpoints[id] = new Set(
+          this.watchedPaths[path].currentImages
+        );
+      }
+    );
   }
 });
 
-const prepareImageList = async function (config, validExtensions) {
-  const getFiles = async function (pathName, recurse, validExtensions) {
-    Log.info(`${moduleName}: Reading directory "${pathName}" for images.`);
-
-    // Non-bocking read dir code
-    const filesAndFolderNames = await FSPromises.readdir(pathName);
-
-    const filePromises = filesAndFolderNames.map(async (fileOrFolderName) => {
-      const fullPath = pathName + "/" + fileOrFolderName;
-      const stats = await FSPromises.stat(fullPath);
-
-      if (stats.isDirectory() && recurse) {
-        return getFiles(fullPath, recurse, validExtensions);
-      }
-
-      if (stats.isFile()) {
-        return {
-          path: fullPath,
-          created: stats.ctimeMs,
-          modified: stats.mtimeMs
-        };
-      }
-      throw `${fileOrFolderName} is not a directory or file!`;
-    });
-
-    const files = (await Promise.all(filePromises))
-      .flat()
-      .filter(({ path }) => {
-        // Remove '.'
-        const extension = pathModule.extname(path).substring(1);
-        return validExtensions.has(extension);
-      });
-    return files;
-  };
-  const imagePaths = (
-    await Promise.all(
-      config.imagePaths.map((path) => {
-        return getFiles(path, config.recurse, validExtensions);
-      })
-    )
-  ).flat();
-
-  const shuffleArray = function (array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      // j is a random index in [0, i].
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-  };
-
-  const sortImageList = function (imageList, sortBy, sortDescending) {
-    const sortVals = {
-      created: (el) => el.created,
-      modified: (el) => el.modified,
-      filename: (el) => el.path.toLocaleLowerCase()
-    };
-    const defaultSort = sortVals.filename;
-
-    const sortValFn = sortVals[sortBy] || defaultSort;
-
-    return imageList.sort((a, b) => {
-      const reverse = -1 * sortDescending;
-      return reverse * (sortValFn(a) - sortValFn(b));
-    });
-  };
-
-  const sortedPaths = config.randomizeImageOrder
-    ? shuffleArray(imagePaths)
-    : sortImageList(
-        imagePaths,
-        config.sortImagesBy,
-        config.sortImagesDescending
-      );
-
-  const rawSortedPaths = sortedPaths.map((p) => p.path);
-  Log.info(`${moduleName}: ${rawSortedPaths.length} files found`);
-  return rawSortedPaths;
+const setSubtraction = (setA, minusB) => {
+  return new Set([...setA].filter((a) => !minusB.has(a)));
 };

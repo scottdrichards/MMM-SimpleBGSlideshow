@@ -19,46 +19,26 @@ const MMM_SimpleBGSlideshow = {
     // an array of strings, each is a path to a directory with images
     imagePaths: [`modules/${moduleName}/exampleImages`],
     // the speed at which to switch between images, in milliseconds
-    slideshowSpeed: 10 * 1000,
-    // if true randomize image order, otherwise use sortImagesBy and sortImagesDescending
-    randomizeImageOrder: false,
-    // how to sort images: name, random, created, modified
-    sortImagesBy: "created",
-    // whether to sort in ascending (default) or descending order
-    sortImagesDescending: false,
-    // if false each path with be viewed separately in the order listed
-    recursiveSubDirectories: false,
-    // list of valid file extensions, separated by commas
-    validImageFileExtensions: "bmp,jpg,jpeg,gif,png",
+    slideshowSpeed: 10_000,
 
     // the gradient to make the text more visible
-    gradient: {
-      direction: "radial", //vertical, horizontal, radial
-      opacity: 0.75, // 1 is black
-      stop1: "40%", // linear first stop, radial start gradient
-      stop2: "80%" // linear second start, radial end gradient
-    },
+    gradientDirection: "vertical", //vertical, horizontal, radial
+    gradientOpacity: 0.75, // 1 is black
+    linearGradientTopOrLeft: "40%", // When does the gradient start at the top
+    linearGradientBottomOrRight: "40%", // When does the gradient start at the bottom
+    radialGradientStart: "30%", // When does the gradient start for radial
+
     brightenText: true // override global text colors to be brighter
   },
 
   // load function
   start: function () {
-    // Validate configuration
+    // Because we send config information to node_modules, we include the identifier
     this.config.identifier = this.identifier;
-    this.config.validImageFileExtensions =
-      this.config.validImageFileExtensions.toLowerCase();
-    this.config.sortImagesBy = this.config.sortImagesBy.toLowerCase();
 
-    if (!this.config.transitionImages) {
-      this.config.transitionSpeed = "0";
-    }
-
-    // Ensure the backgroundAnimation duration matches the slideShowSpeed unless it has been
-    // overriden
-    if (this.config.backgroundAnimationDuration === "1s") {
-      this.config.backgroundAnimationDuration =
-        this.config.slideshowSpeed / 1000 + "s";
-    }
+    this.curIndex = -1;
+    this.imageList = [];
+    this.sendSocketNotification(`subscribe`, this.config);
   },
 
   getStyles: function () {
@@ -68,12 +48,19 @@ const MMM_SimpleBGSlideshow = {
   // Notifications from server
   socketNotificationReceived: function (notification, payload) {
     const actions = {
-      [`${moduleName} image list`]: () => {
+      [`IMAGE_PATH_UPDATE`]: () => {
         console.log(payload);
-        this.curIndex = -1;
-        this.imageList = payload.imageList;
-        this.restartInterval();
-        this.nextImage();
+        const { path, imagesToAdd, imagesToRemove } = payload;
+        const addPaths = imagesToAdd.map((p) => path + p);
+        const removePaths = imagesToRemove.map((p) => path + p);
+        this.imageList = this.imageList
+          .concat(addPaths)
+          .filter((i) => !removePaths.some((r) => r === i));
+
+        // If we don't have a slideshow going, start it
+        if (!this.intervalID) {
+          this.nextImage(true);
+        }
       }
     };
     console.log(`${moduleName}: notification`);
@@ -91,12 +78,17 @@ const MMM_SimpleBGSlideshow = {
       vertical: ["linearGradient", "vertical"],
       horizontal: ["linearGradient", "horizontal"],
       radial: ["radialGradient"]
-    }[this.config.gradient.direction];
+    }[this.config.gradientDirection];
     if (gradientClasses) wrapper.classList.add(...gradientClasses);
     // CSS custom properties for gradients
-    Object.entries(this.config.gradient)
-      .filter(([k, v]) => v !== "direction")
-      .forEach(([k, v]) => wrapper.style.setProperty(`--${k}`, v));
+    [
+      "gradientOpacity",
+      "linearGradientTopOrLeft",
+      "linearGradientBottomOrRight",
+      "radialGradientStart"
+    ].forEach((prop) =>
+      wrapper.style.setProperty(`--${prop}`, this.config[prop])
+    );
 
     if (this.config.brightenText) document.body.classList.add("brighterColors");
 
@@ -106,35 +98,26 @@ const MMM_SimpleBGSlideshow = {
 
     if (this.config.imagePaths.length === 0) {
       Log.error(`${moduleName}: Missing required parameter imagePaths.`);
-    } else {
-      // create an empty image list
-      this.imageList = [];
-      // set beginning image index to 0, as it will auto increment on start
-      this.imageIndex = 0;
-      this.updateImageList();
     }
 
     return wrapper;
   },
 
-  restartInterval: function () {
-    if (this.intervalID) clearInterval(this.intervalID);
-    this.intervalID = setInterval(
-      this.nextImage.bind(this),
-      this.config.slideshowSpeed
-    );
-  },
-
-  nextImage: function (restartInterval = false) {
-    const nextIndex = (this.curIndex + 1) % this.imageList.length;
-    if (nextIndex < this.curIndex) {
-      // Exhausted images in list
-      this.sendSocketNotification(`${moduleName} image list`);
+  /**
+   * Triggers the next image in the sequence
+   *
+   * @param {boolean} startInterval  should it (re)start the slideshow?
+   */
+  nextImage: function (startInterval = false) {
+    this.curIndex = (this.curIndex + 1) % this.imageList.length;
+    this.displayImage(this.imageList[this.curIndex]);
+    if (startInterval) {
+      if (this.intervalID) clearInterval(this.intervalID);
+      this.intervalID = setInterval(
+        this.nextImage.bind(this),
+        this.config.slideshowSpeed
+      );
     }
-
-    this.displayImage(this.imageList[nextIndex]);
-    this.curIndex = nextIndex;
-    if (restartInterval) this.restartInterval();
   },
 
   displayImage: function (path) {
@@ -150,34 +133,12 @@ const MMM_SimpleBGSlideshow = {
       // Add new image
       this.imagesDiv.appendChild(image);
     };
+    image.onerror = () => {
+      this.imageList = this.imageList.filter((i) => i !== path);
+      this.nextImage();
+    };
 
     image.src = path;
-  },
-
-  suspend: function () {
-    if (this.timer !== undefined) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-  },
-
-  resume: function () {
-    this.suspend();
-    const self = this;
-
-    if (self.config.changeImageOnResume) {
-      self.updateImage();
-    }
-
-    this.timer = setInterval(function () {
-      // console.info('MMM-BackgroundSlideshow updating from resume');
-      self.updateImage();
-    }, self.config.slideshowSpeed);
-  },
-
-  updateImageList: function () {
-    this.suspend();
-    this.sendSocketNotification(`${moduleName} image request`, this.config);
   }
 };
 Module.register(moduleName, MMM_SimpleBGSlideshow);

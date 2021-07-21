@@ -15,10 +15,10 @@
 .MMM-SimpleBGSlideshow .wrapper.linearGradient::after {
     background: linear-gradient(
         var(--grad-linear-angle, 0deg),
-        rgba(0, 0,0, var(--grad-opacity, .75)) 0%,
-        rgba(0,0,0,0) var(--grad-stop1, 40%),
-        rgba(0,0,0,0) var(--grad-stop2, 80%),
-        rgba(0, 0,0, var(--grad-opacity, .75)) 100%
+        rgba(0, 0,0, var(--gradientOpacity, .75)) 0%,
+        rgba(0,0,0,0) var(--linearGradientTopOrLeft, 40%),
+        rgba(0,0,0,0) var(--linearGradientBottomOrRight, 80%),
+        rgba(0, 0,0, var(--gradientOpacity, .75)) 100%
     );
 }
 .MMM-SimpleBGSlideshow .wrapper.linearGradient.horizontal{
@@ -28,8 +28,8 @@
 .MMM-SimpleBGSlideshow .wrapper.radialGradient::after {
     background: radial-gradient(
         closest-side,
-        rgba(0,0,0,0) var(--grad-stop1, 80%),
-        rgba(0,0,0,var(--grad-opacity, .75)) var(--grad-stop2, 110%)
+        rgba(0,0,0,0) var(--radialGradientStart, 80%),
+        rgba(0,0,0,var(--gradientOpacity, .75)) 142%
     );
 }
 
