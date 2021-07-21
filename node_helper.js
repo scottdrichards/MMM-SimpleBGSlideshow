@@ -35,7 +35,6 @@ module.exports = NodeHelper.create({
       .filter((path) => !(path in this.watchedPaths))
       .forEach((path) => {
         this.watchedPaths[path] = {
-          abortController: new AbortController(),
           timer: undefined, // This is used to debounce file change messages
           currentImages: new Set(),
           syncedEndpoints: {}
@@ -75,10 +74,7 @@ module.exports = NodeHelper.create({
 
     // Spin up a file watcher daemon
     try {
-      const watcher = FSPromises.watch(
-        path,
-        this.watchedPaths[path].abortController.abortSignal
-      );
+      const watcher = FSPromises.watch(path);
       (async () => {
         // Async portion that will keep running in background
         console.log(`Watching ${path}`);
