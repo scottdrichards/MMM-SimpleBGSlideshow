@@ -10,7 +10,7 @@
 const express = require("express");
 const Log = require("../../js/logger.js");
 const NodeHelper = require("node_helper");
-const FSPromises = require("fs").promises;
+const FS = require("fs");
 const pathModule = require("path");
 
 module.exports = NodeHelper.create({
@@ -68,28 +68,22 @@ module.exports = NodeHelper.create({
   watchPath: function (path) {
     // Find current files
     console.log(`Reading files in ${path}`);
-    FSPromises.readdir(path).then((diskItems) => {
+    FS.readdir(path, (err, diskItems) => {
       diskItems.map((diskItem) => this.processFilePath(path, diskItem));
     });
 
     // Spin up a file watcher daemon
     try {
-      const watcher = FSPromises.watch(path);
-      (async () => {
-        // Async portion that will keep running in background
-        console.log(`Watching ${path}`);
-        for await (const event of watcher) {
-          // New file change detected
-          if (event.eventType === "rename") {
-            // "rename" is used for add/delete/rename. A rename will actully
-            // cause two calls, one for the old file name and one for the new
+      console.log(`Watching ${path}`);
+      FS.watch(path, (eventType, filename) => {
+        if (eventType === "rename") {
+          // "rename" is used for add/delete/rename. A rename will actully
+          // cause two calls, one for the old file name and one for the new
 
-            // Now lets see if it is a file path we care about
-            this.processFilePath(path, event.filename);
-          }
+          // Now lets see if it is a file path we care about
+          this.processFilePath(path, filename);
         }
-        console.log(`No longer watching ${path}`);
-      })(); // async IIFE
+      });
     } catch (err) {
       if (err.name === "AbortError") return;
       throw err;
@@ -97,20 +91,20 @@ module.exports = NodeHelper.create({
   },
   processFilePath: function (path, filename) {
     const filePath = pathModule.join(path, filename);
-    FSPromises.stat(filePath)
-      .then((stats) => {
-        this.watchedPaths[path].currentImages.add(filename);
-      })
-      .catch((error) => {
-        console.error(error);
+    FS.stat(filePath, (err, stats) => {
+      if (stats.isDirectory()) {
+        // not handling directories yet
+      } else if (err) {
+        console.error(err);
         this.watchedPaths[path]?.currentImages.delete(filename);
-      })
-      .finally(() => {
-        clearTimeout(this.watchedPaths[path]?.timer);
-        this.watchedPaths[path].timer = setTimeout(() => {
-          this.sendUpdates(path);
-        }, 500);
-      });
+      } else {
+        this.watchedPaths[path].currentImages.add(filename);
+      }
+      clearTimeout(this.watchedPaths[path]?.timer);
+      this.watchedPaths[path].timer = setTimeout(() => {
+        this.sendUpdates(path);
+      }, 500);
+    });
   },
   sendUpdates: function (path, id = undefined) {
     // The watchedPaths[path] may have been removed since we set up this timer
