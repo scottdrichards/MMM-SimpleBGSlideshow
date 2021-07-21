@@ -17,7 +17,7 @@ const MMM_SimpleBGSlideshow = {
   // Default module config.
   defaults: {
     // an array of strings, each is a path to a directory with images
-    imagePaths: [`modules/${moduleName}/exampleImages`],
+    imagePaths: [], // resolves relative to MM root. So 'images' => ~MagicMirror/images
     // the speed at which to switch between images, in milliseconds
     slideshowSpeed: 10_000,
 
