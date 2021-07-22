@@ -69,7 +69,8 @@ module.exports = NodeHelper.create({
     // Find current files
     console.log(`Reading files in ${path}`);
     FS.readdir(path, (err, diskItems) => {
-      diskItems.map((diskItem) => this.processFilePath(path, diskItem));
+      if (diskItems.length === 0) console.log(`No items in path ${path}`);
+      diskItems.forEach((diskItem) => this.processFilePath(path, diskItem));
     });
 
     // Spin up a file watcher daemon
@@ -92,11 +93,11 @@ module.exports = NodeHelper.create({
   processFilePath: function (path, filename) {
     const filePath = pathModule.join(path, filename);
     FS.stat(filePath, (err, stats) => {
-      if (stats.isDirectory()) {
-        // not handling directories yet
-      } else if (err) {
-        console.error(err);
+      if (err) {
+        console.error(err.message);
         this.watchedPaths[path]?.currentImages.delete(filename);
+      } else if (stats.isDirectory()) {
+        // not handling directories yet
       } else {
         this.watchedPaths[path].currentImages.add(filename);
       }
@@ -120,6 +121,11 @@ module.exports = NodeHelper.create({
           ...setSubtraction(syncedImages, this.watchedPaths[path].currentImages)
         ];
 
+        console.log(
+          `BGSS Sending update. ${
+            imagesToAdd.length && "+" + imagesToAdd.length
+          } ${imagesToRemove.length && "-" + imagesToRemove.length}`
+        );
         this.sendSocketNotification(`IMAGE_PATH_UPDATE`, {
           identifier: id,
           path,
