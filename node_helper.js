@@ -69,6 +69,7 @@ module.exports = NodeHelper.create({
     // Find current files
     console.log(`Reading files in ${path}`);
     FS.readdir(path, (err, diskItems) => {
+      if (err) return console.error(err.message);
       if (diskItems.length === 0) console.log(`No items in path ${path}`);
       diskItems.forEach((diskItem) => this.processFilePath(path, diskItem));
     });
