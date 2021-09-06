@@ -21,6 +21,9 @@ const MMM_SimpleBGSlideshow = {
     // the speed at which to switch between images, in milliseconds
     slideshowSpeed: 10_000,
 
+    // Amount of time for a fade-in to be done (CSS string)
+    fadeInTime: "2s",
+
     // the gradient to make the text more visible
     gradientDirection: "vertical", //vertical, horizontal, radial
     gradientOpacity: 0.75, // 1 is black
@@ -34,7 +37,8 @@ const MMM_SimpleBGSlideshow = {
   // load function
   start: function () {
     // Because we send config information to node_modules, we include the identifier
-    this.config.identifier = this.identifier;
+    const sessionID = Math.floor(Math.random() * 10_000);
+    this.config.identifier = sessionID + "_" + this.identifier;
 
     this.curIndex = -1;
     this.imageList = [];
@@ -45,11 +49,15 @@ const MMM_SimpleBGSlideshow = {
     return ["styles.css"];
   },
 
+  notificationReceived: function (notification, payload) {
+    Log.info(notification, payload);
+  },
+
   // Notifications from server
   socketNotificationReceived: function (notification, payload) {
     const actions = {
       [`IMAGE_PATH_UPDATE`]: () => {
-        console.log(payload);
+        Log.info(payload);
         const { path, imagesToAdd, imagesToRemove } = payload;
         const addPaths = imagesToAdd.map((p) => path + p);
         const removePaths = imagesToRemove.map((p) => path + p);
@@ -63,8 +71,8 @@ const MMM_SimpleBGSlideshow = {
         }
       }
     };
-    console.log(`${moduleName}: notification`);
-    if (actions[notification] && payload.identifier === this.identifier)
+    Log.info(`${moduleName}: notification`);
+    if (actions[notification] && payload.identifier === this.config.identifier)
       actions[notification]();
   },
 
@@ -85,7 +93,8 @@ const MMM_SimpleBGSlideshow = {
       "gradientOpacity",
       "linearGradientTopOrLeft",
       "linearGradientBottomOrRight",
-      "radialGradientStart"
+      "radialGradientStart",
+      "fadeInTime"
     ].forEach((prop) =>
       wrapper.style.setProperty(`--${prop}`, this.config[prop])
     );

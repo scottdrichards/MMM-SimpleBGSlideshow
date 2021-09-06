@@ -7,8 +7,9 @@ This module is a spiritual fork from [Darick Carpenter's BackgroundSlideshow](ht
 5. The backend watches for changes and automatically updates the client. No refresh required
 
 ## Some limitations
-1. It does not do recursive search of image folders. This is because the file watcher in Node only can recursively watch on some systems without using polling (expensive). You can still include sub-folders but you must do so explicitly.
-2. It does not do image transitions. For some reason Chrome on the Raspberry Pi does not do image transitions well. My guess is that it does not take advantage of hardware accelleration for such tasks.
+1. On a Raspberry Pi 3, Chromium kept crashing. I ***highly recommend*** you use a different browser such as [Firefox ESR](https://raspberrytips.com/install-firefox-raspberry-pi/) which can be installed by doing `sudo apt install firefox-esr`. Once installed, you can start the MM server using `npm run server` and then start the client using `firefox-esr --kiosk http://localhost:8080`
+2. It does not do recursive search of image folders. This is because the file watcher in Node only can recursively watch on some systems without using polling (expensive). You can still include sub-folders but you must do so explicitly.
+3. It does not do image transitions. For some reason Chrome on the Raspberry Pi does not do image transitions well. My guess is that it does not take advantage of hardware accelleration for such tasks.
 
 
 I also trimmed features that seemed to have limited use for most people. If there are missing features that people would like, I would be happy to add them in.
@@ -45,6 +46,7 @@ You can add the following to your main configuration file:
 |`linearGradientTopOrLeft`|When does the gradient start at the top (or left for horizontal)|`40%`|
 |`linearGradientBottomOrRight`|When does the gradient start at the bottom (or right for horizontal)|`40%`|
 |`radialGradientStart`|When does the gradient start for radial|`30%`|
+|`fadeInTime`|How long a fade-in should be, using CSS string|`2s`|
 
 # Screenshots
 ## Linear Gradient

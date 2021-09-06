@@ -35,9 +35,15 @@
 
 .MMM-SimpleBGSlideshow img{
     object-fit: cover;
+    animation: fadein var(--fadeInTime, 2s);
 }
 
 body.brighterColors{
     --color-text: #e6e6e6;
     --color-text-dimmed: #bfbcbc;
+}
+
+@keyframes fadein {
+    from {opacity: 0;}
+    to {opacity: 1;}
 }

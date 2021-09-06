@@ -20,7 +20,9 @@ module.exports = NodeHelper.create({
   },
 
   socketNotificationReceived: function (notification, config) {
-    Log.info(notification);
+    Log.info(
+      `Received notification: ${notification} from ${config.identifier}`
+    );
 
     if (notification === "unsubscribe") {
       // TODO: unsubscribe from listeners
@@ -30,10 +32,18 @@ module.exports = NodeHelper.create({
     if (notification !== "subscribe")
       throw `No handler for notification: '${notification}'`;
 
+    Log.info(
+      `Handling request for images on paths: ${config.imagePaths.join(", ")}`
+    );
     // Set up paths that are not currently monitored
     config.imagePaths
       .filter((path) => !(path in this.watchedPaths))
+      .map((val, i, arr) => {
+        if (i === arr.length - 1) Log.debug(`Adding ${arr.length} paths`);
+        return val;
+      })
       .forEach((path) => {
+        Log.debug(`Adding path to watched paths: ${path}`);
         this.watchedPaths[path] = {
           timer: undefined, // This is used to debounce file change messages
           currentImages: new Set(),
@@ -55,9 +65,12 @@ module.exports = NodeHelper.create({
     config.imagePaths
       .filter((path) => {
         // We only want paths that the module isn't already registered for
-        return !this.watchedPaths[path].syncedEndpoints[config.id];
+        return !this.watchedPaths[path].syncedEndpoints[config.identifier];
       })
       .forEach((path) => {
+        Log.debug(
+          `Adding endpoint ${config.identifier} to watchedPaths: ${path}`
+        );
         // Add path to watch list
         this.watchedPaths[path].syncedEndpoints[config.identifier] = new Set();
         // Get the module up to speed
@@ -67,16 +80,16 @@ module.exports = NodeHelper.create({
   },
   watchPath: function (path) {
     // Find current files
-    console.log(`Reading files in ${path}`);
+    Log.info(`Reading files in ${path}`);
     FS.readdir(path, (err, diskItems) => {
       if (err) return console.error(err.message);
-      if (diskItems.length === 0) console.log(`No items in path ${path}`);
+      if (diskItems.length === 0) Log.debug(`No items in path ${path}`);
       diskItems.forEach((diskItem) => this.processFilePath(path, diskItem));
     });
 
     // Spin up a file watcher daemon
     try {
-      console.log(`Watching ${path}`);
+      Log.info(`Watching ${path}`);
       FS.watch(path, (eventType, filename) => {
         if (eventType === "rename") {
           // "rename" is used for add/delete/rename. A rename will actully
@@ -95,11 +108,12 @@ module.exports = NodeHelper.create({
     const filePath = pathModule.join(path, filename);
     FS.stat(filePath, (err, stats) => {
       if (err) {
-        console.error(err.message);
+        Log.error(err.message);
         this.watchedPaths[path]?.currentImages.delete(filename);
       } else if (stats.isDirectory()) {
         // not handling directories yet
       } else {
+        Log.debug(`Adding ${filename} to current images`);
         this.watchedPaths[path].currentImages.add(filename);
       }
       clearTimeout(this.watchedPaths[path]?.timer);
@@ -111,6 +125,7 @@ module.exports = NodeHelper.create({
   sendUpdates: function (path, id = undefined) {
     // The watchedPaths[path] may have been removed since we set up this timer
     if (!this.watchedPaths[path]) return;
+    Log.debug(`Preparing updates for path: ${path}`);
 
     (id ? [id] : Object.keys(this.watchedPaths[path].syncedEndpoints)).forEach(
       (id) => {
@@ -122,10 +137,10 @@ module.exports = NodeHelper.create({
           ...setSubtraction(syncedImages, this.watchedPaths[path].currentImages)
         ];
 
-        console.log(
-          `BGSS Sending update. ${
-            imagesToAdd.length && "+" + imagesToAdd.length
-          } ${imagesToRemove.length && "-" + imagesToRemove.length}`
+        Log.info(
+          `BGSS Sending update to ${id}: ${
+            imagesToAdd.length ? `+ ${imagesToAdd.length} images` : ""
+          } ${imagesToRemove.length ? `- ${imagesToRemove.length} images` : ""}`
         );
         this.sendSocketNotification(`IMAGE_PATH_UPDATE`, {
           identifier: id,
