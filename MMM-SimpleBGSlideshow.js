@@ -50,7 +50,7 @@ const MMM_SimpleBGSlideshow = {
   },
 
   notificationReceived: function (notification, payload) {
-    Log.info(notification, payload);
+    // Log.info(notification, payload);
   },
 
   // Notifications from server
