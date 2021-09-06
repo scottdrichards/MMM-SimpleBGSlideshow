@@ -35,6 +35,9 @@
 
 .MMM-SimpleBGSlideshow img{
     object-fit: cover;
+}
+
+.MMM-SimpleBGSlideshow img.animate{
     animation: fadein var(--fadeInTime, 2s);
 }
 

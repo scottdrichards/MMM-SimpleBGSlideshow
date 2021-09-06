@@ -22,7 +22,7 @@ const MMM_SimpleBGSlideshow = {
     slideshowSpeed: 10_000,
 
     // Amount of time for a fade-in to be done (CSS string)
-    fadeInTime: "2s",
+    fadeInTime: undefined,
 
     // the gradient to make the text more visible
     gradientDirection: "vertical", //vertical, horizontal, radial
@@ -140,6 +140,9 @@ const MMM_SimpleBGSlideshow = {
       currentImage?.classList.add("old");
 
       // Add new image
+      if (this.config.fadeInTime) {
+        image.classList.add("animate");
+      }
       this.imagesDiv.appendChild(image);
     };
     image.onerror = () => {
