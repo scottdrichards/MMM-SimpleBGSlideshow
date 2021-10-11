@@ -31,18 +31,22 @@ const MMM_SimpleBGSlideshow = {
     linearGradientBottomOrRight: "40%", // When does the gradient start at the bottom
     radialGradientStart: "30%", // When does the gradient start for radial
 
-    brightenText: true // override global text colors to be brighter
+    brightenText: true, // override global text colors to be brighter,
+
+    loadDelay: 0 // Should the module wait to load (helps if there is module congestion) (milliseconds)
   },
 
   // load function
   start: function () {
-    // Because we send config information to node_modules, we include the identifier
-    const sessionID = Math.floor(Math.random() * 10_000);
-    this.config.identifier = sessionID + "_" + this.identifier;
+    setTimeout(() => {
+      // Because we send config information to node_modules, we include the identifier
+      const sessionID = Math.floor(Math.random() * 10_000);
+      this.config.identifier = sessionID + "_" + this.identifier;
 
-    this.curIndex = -1;
-    this.imageList = [];
-    this.sendSocketNotification(`subscribe`, this.config);
+      this.curIndex = -1;
+      this.imageList = [];
+      this.sendSocketNotification(`subscribe`, this.config);
+    }, this.config.loadDelay);
   },
 
   getStyles: function () {
@@ -153,4 +157,5 @@ const MMM_SimpleBGSlideshow = {
     image.src = path;
   }
 };
+
 Module.register(moduleName, MMM_SimpleBGSlideshow);
